@@ -1,7 +1,7 @@
 # Inkwell(s)
 
 [![Crates.io](https://img.shields.io/crates/v/inkwell_llvm_12.svg?style=plastic)](https://crates.io/crates/inkwell)
-[![lines of code](https://tokei.rs/b1/github/Pavlos-Efstathiou/inkwell)](https://github.com/Aaronepower/tokei)
+[![lines of code](https://tokei.rs/b1/github/lunandd/inkwell)](https://github.com/Aaronepower/tokei)
 ![Minimum rustc 1.42](https://img.shields.io/badge/rustc-1.42+-brightgreen.svg)
 
 **I**t's a **N**ew **K**ind of **W**rapper for **E**xposing **LL**VM (*S*afely)

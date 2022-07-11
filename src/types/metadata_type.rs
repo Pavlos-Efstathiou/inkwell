@@ -1,10 +1,9 @@
 use llvm_sys::prelude::LLVMTypeRef;
 
 use crate::context::ContextRef;
-use crate::types::traits::AsTypeRef;
-use crate::types::{Type, FunctionType, BasicTypeEnum, ArrayType, VectorType};
-use crate::values::{IntValue, MetadataValue};
 use crate::types::enums::BasicMetadataTypeEnum;
+use crate::types::traits::AsTypeRef;
+use crate::types::{FunctionType, Type};
 
 /// A `MetadataType` is the type of a metadata.
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
@@ -34,7 +33,11 @@ impl<'ctx> MetadataType<'ctx> {
     /// let fn_type = md_type.fn_type(&[], false);
     /// ```
     #[llvm_versions(6.0..=latest)]
-    pub fn fn_type(self, param_types: &[BasicMetadataTypeEnum<'ctx>], is_var_args: bool) -> FunctionType<'ctx> {
+    pub fn fn_type(
+        self,
+        param_types: &[BasicMetadataTypeEnum<'ctx>],
+        is_var_args: bool,
+    ) -> FunctionType<'ctx> {
         self.metadata_type.fn_type(param_types, is_var_args)
     }
 

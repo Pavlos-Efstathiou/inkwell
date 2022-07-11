@@ -1,15 +1,15 @@
 [package]
 name = "inkwell_llvm12"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Daniel Kolsoi <thadan64@gmail.com>"]
 description = "Inkwell aims to help you pen your own programming languages by safely wrapping llvm-sys."
 documentation = "https://thedan64.github.io/inkwell/"
-repository = "https://github.com/Pavlos-Efstathiou/inkwell"
+repository = "https://github.com/lunandd/inkwell"
 readme = "README.md"
 keywords = ["llvm", "safe", "wrapper"]
 license = "Apache-2.0"
 categories = ["development-tools::ffi"]
-edition = "2018"
+edition = "2021"
 
 [features]
 default = ["target-all", "llvm12-0"]

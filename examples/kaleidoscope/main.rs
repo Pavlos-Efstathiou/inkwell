@@ -77,10 +77,7 @@ impl LexError {
     }
 
     pub fn with_index(msg: &'static str, index: usize) -> LexError {
-        LexError {
-            error: msg,
-            index: index,
-        }
+        LexError { error: msg, index }
     }
 }
 
@@ -174,7 +171,7 @@ impl<'a> Lexer<'a> {
                     };
 
                     // Parse float.
-                    if ch != '.' && !ch.is_digit(16) {
+                    if ch != '.' && !ch.is_ascii_hexdigit() {
                         break;
                     }
 
@@ -321,7 +318,7 @@ impl<'a> Parser<'a> {
         let tokens = lexer.by_ref().collect();
 
         Parser {
-            tokens: tokens,
+            tokens,
             prec: op_precedence,
             pos: 0,
         }
@@ -491,7 +488,7 @@ impl<'a> Parser<'a> {
 
         Ok(Prototype {
             name: id,
-            args: args,
+            args,
             is_op: is_operator,
             prec: precedence,
         })
@@ -610,10 +607,7 @@ impl<'a> Parser<'a> {
 
                 self.advance();
 
-                Ok(Expr::Call {
-                    fn_name: id,
-                    args: args,
-                })
+                Ok(Expr::Call { fn_name: id, args })
             }
 
             _ => Ok(Expr::Variable(id)),
@@ -665,7 +659,7 @@ impl<'a> Parser<'a> {
             }
 
             left = Expr::Binary {
-                op: op,
+                op,
                 left: Box::new(left),
                 right: Box::new(right),
             };
@@ -803,7 +797,7 @@ impl<'a> Parser<'a> {
         let body = self.parse_expr()?;
 
         Ok(Expr::VarIn {
-            variables: variables,
+            variables,
             body: Box::new(body),
         })
     }
@@ -1241,11 +1235,11 @@ impl<'a, 'ctx> Compiler<'a, 'ctx> {
         function: &Function,
     ) -> Result<FunctionValue<'ctx>, &'static str> {
         let mut compiler = Compiler {
-            context: context,
-            builder: builder,
+            context,
+            builder,
             fpm: pass_manager,
-            module: module,
-            function: function,
+            module,
+            function,
             fn_value_opt: None,
             variables: HashMap::new(),
         };

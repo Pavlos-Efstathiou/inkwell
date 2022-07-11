@@ -1,9 +1,9 @@
 use llvm_sys::prelude::LLVMTypeRef;
 
 use crate::context::ContextRef;
-use crate::types::traits::AsTypeRef;
-use crate::types::{Type, BasicTypeEnum, FunctionType};
 use crate::types::enums::BasicMetadataTypeEnum;
+use crate::types::traits::AsTypeRef;
+use crate::types::{FunctionType, Type};
 
 /// A `VoidType` is a special type with no possible direct instances. It's only
 /// useful as a function return type.
@@ -67,7 +67,11 @@ impl<'ctx> VoidType<'ctx> {
     /// let void_type = context.void_type();
     /// let fn_type = void_type.fn_type(&[], false);
     /// ```
-    pub fn fn_type(self, param_types: &[BasicMetadataTypeEnum<'ctx>], is_var_args: bool) -> FunctionType<'ctx> {
+    pub fn fn_type(
+        self,
+        param_types: &[BasicMetadataTypeEnum<'ctx>],
+        is_var_args: bool,
+    ) -> FunctionType<'ctx> {
         self.void_type.fn_type(param_types, is_var_args)
     }
 

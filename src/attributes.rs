@@ -1,11 +1,15 @@
 //! `Attribute`s are optional modifiers to functions, function parameters, and return types.
 
 #[llvm_versions(3.9..=latest)]
-use llvm_sys::prelude::LLVMAttributeRef;
-#[llvm_versions(3.9..=latest)]
-use llvm_sys::core::{LLVMGetEnumAttributeKindForName, LLVMGetLastEnumAttributeKind, LLVMGetEnumAttributeKind, LLVMGetEnumAttributeValue, LLVMGetStringAttributeKind, LLVMGetStringAttributeValue, LLVMIsEnumAttribute, LLVMIsStringAttribute};
+use llvm_sys::core::{
+    LLVMGetEnumAttributeKind, LLVMGetEnumAttributeKindForName, LLVMGetEnumAttributeValue,
+    LLVMGetLastEnumAttributeKind, LLVMGetStringAttributeKind, LLVMGetStringAttributeValue,
+    LLVMIsEnumAttribute, LLVMIsStringAttribute,
+};
 #[llvm_versions(12.0..=latest)]
 use llvm_sys::core::{LLVMGetTypeAttributeValue, LLVMIsTypeAttribute};
+#[llvm_versions(3.9..=latest)]
+use llvm_sys::prelude::LLVMAttributeRef;
 
 #[llvm_versions(3.9..=latest)]
 use std::ffi::CStr;
@@ -26,9 +30,7 @@ impl Attribute {
     pub(crate) unsafe fn new(attribute: LLVMAttributeRef) -> Self {
         debug_assert!(!attribute.is_null());
 
-        Attribute {
-            attribute,
-        }
+        Attribute { attribute }
     }
 
     /// Determines whether or not an `Attribute` is an enum. This method will
@@ -46,9 +48,7 @@ impl Attribute {
     /// assert!(enum_attribute.is_enum());
     /// ```
     pub fn is_enum(self) -> bool {
-        unsafe {
-            LLVMIsEnumAttribute(self.attribute) == 1
-        }
+        unsafe { LLVMIsEnumAttribute(self.attribute) == 1 }
     }
 
     /// Determines whether or not an `Attribute` is a string. This method will
@@ -66,9 +66,7 @@ impl Attribute {
     /// assert!(string_attribute.is_string());
     /// ```
     pub fn is_string(self) -> bool {
-        unsafe {
-            LLVMIsStringAttribute(self.attribute) == 1
-        }
+        unsafe { LLVMIsStringAttribute(self.attribute) == 1 }
     }
 
     /// Determines whether or not an `Attribute` is a type attribute. This method will
@@ -130,9 +128,7 @@ impl Attribute {
     pub fn get_enum_kind_id(self) -> u32 {
         assert!(self.is_enum()); // FIXME: SubTypes
 
-        unsafe {
-            LLVMGetEnumAttributeKind(self.attribute)
-        }
+        unsafe { LLVMGetEnumAttributeKind(self.attribute) }
     }
 
     /// Gets the last enum kind id associated with builtin names.
@@ -145,9 +141,7 @@ impl Attribute {
     /// assert_eq!(Attribute::get_last_enum_kind_id(), 56);
     /// ```
     pub fn get_last_enum_kind_id() -> u32 {
-        unsafe {
-            LLVMGetLastEnumAttributeKind()
-        }
+        unsafe { LLVMGetLastEnumAttributeKind() }
     }
 
     /// Gets the value associated with an enum `Attribute`.
@@ -165,9 +159,7 @@ impl Attribute {
     pub fn get_enum_value(self) -> u64 {
         assert!(self.is_enum()); // FIXME: SubTypes
 
-        unsafe {
-            LLVMGetEnumAttributeValue(self.attribute)
-        }
+        unsafe { LLVMGetEnumAttributeValue(self.attribute) }
     }
 
     /// Gets the string kind id associated with a string attribute.
@@ -186,13 +178,9 @@ impl Attribute {
         assert!(self.is_string()); // FIXME: SubTypes
 
         let mut length = 0;
-        let cstr_ptr = unsafe {
-            LLVMGetStringAttributeKind(self.attribute, &mut length)
-        };
+        let cstr_ptr = unsafe { LLVMGetStringAttributeKind(self.attribute, &mut length) };
 
-        unsafe {
-            CStr::from_ptr(cstr_ptr)
-        }
+        unsafe { CStr::from_ptr(cstr_ptr) }
     }
 
     /// Gets the string value associated with a string attribute.
@@ -211,13 +199,9 @@ impl Attribute {
         assert!(self.is_string()); // FIXME: SubTypes
 
         let mut length = 0;
-        let cstr_ptr = unsafe {
-            LLVMGetStringAttributeValue(self.attribute, &mut length)
-        };
+        let cstr_ptr = unsafe { LLVMGetStringAttributeValue(self.attribute, &mut length) };
 
-        unsafe {
-            CStr::from_ptr(cstr_ptr)
-        }
+        unsafe { CStr::from_ptr(cstr_ptr) }
     }
 
     /// Gets the type associated with a type attribute.
@@ -265,10 +249,13 @@ impl AttributeLoc {
         match self {
             AttributeLoc::Return => 0,
             AttributeLoc::Param(index) => {
-                assert!(index <= u32::max_value() - 2, "Param index must be <= u32::max_value() - 2");
+                assert!(
+                    index <= u32::max_value() - 2,
+                    "Param index must be <= u32::max_value() - 2"
+                );
 
                 index + 1
-            },
+            }
             AttributeLoc::Function => u32::max_value(),
         }
     }
