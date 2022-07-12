@@ -46,6 +46,7 @@ pub mod data_layout;
 )))]
 pub mod debug_info;
 pub mod execution_engine;
+pub mod intrinsics;
 pub mod memory_buffer;
 #[deny(missing_docs)]
 pub mod module;
@@ -64,6 +65,8 @@ extern crate llvm_sys_110 as llvm_sys;
 extern crate llvm_sys_120 as llvm_sys;
 #[cfg(feature = "llvm13-0")]
 extern crate llvm_sys_130 as llvm_sys;
+#[cfg(feature = "llvm14-0")]
+extern crate llvm_sys_140 as llvm_sys;
 #[cfg(feature = "llvm3-6")]
 extern crate llvm_sys_36 as llvm_sys;
 #[cfg(feature = "llvm3-7")]
@@ -124,7 +127,7 @@ macro_rules! assert_unique_used_features {
     }
 }
 
-assert_unique_used_features! {"llvm3-6", "llvm3-7", "llvm3-8", "llvm3-9", "llvm4-0", "llvm5-0", "llvm6-0", "llvm7-0", "llvm8-0", "llvm9-0", "llvm10-0", "llvm11-0", "llvm12-0", "llvm13-0"}
+assert_unique_used_features! {"llvm3-6", "llvm3-7", "llvm3-8", "llvm3-9", "llvm4-0", "llvm5-0", "llvm6-0", "llvm7-0", "llvm8-0", "llvm9-0", "llvm10-0", "llvm11-0", "llvm12-0", "llvm13-0", "llvm14-0"}
 
 /// Defines the address space in which a global will be inserted.
 ///
@@ -454,4 +457,15 @@ pub enum InlineAsmDialect {
     ATT,
     #[llvm_variant(LLVMInlineAsmDialectIntel)]
     Intel,
+}
+
+/// Exposes LLVM internal references to the outside.
+#[cfg(feature = "internal-getters")]
+pub trait LLVMReference<T> {
+    /// Returns an underlying llvm reference
+    /// # Safety
+    /// This method is inherintly unsafe as it is designed to return internal LLVM references
+    /// Always encapsulate the entire operation in an unsafe call.
+    /// Leaking `T` outside of the unsafe block can lead to undefined behaviour
+    unsafe fn get_ref(&self) -> T;
 }

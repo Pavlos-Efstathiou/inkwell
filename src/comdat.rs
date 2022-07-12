@@ -7,6 +7,9 @@ use llvm_sys::comdat::{
 };
 use llvm_sys::prelude::LLVMComdatRef;
 
+#[cfg(feature = "internal-getters")]
+use crate::LLVMReference;
+
 #[llvm_enum(LLVMComdatSelectionKind)]
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 /// Determines how linker conflicts are to be resolved.
@@ -49,5 +52,12 @@ impl Comdat {
     /// Sets what kind of `Comdat` this should be.
     pub fn set_selection_kind(self, kind: ComdatSelectionKind) {
         unsafe { LLVMSetComdatSelectionKind(self.0, kind.into()) }
+    }
+}
+
+#[cfg(feature = "internal-getters")]
+impl LLVMReference<LLVMComdatRef> for Comdat {
+    unsafe fn get_ref(&self) -> LLVMComdatRef {
+        self.0
     }
 }

@@ -2,6 +2,7 @@ use llvm_sys::core::LLVMGetTypeKind;
 use llvm_sys::prelude::LLVMTypeRef;
 use llvm_sys::LLVMTypeKind;
 
+use crate::support::LLVMString;
 use crate::types::traits::AsTypeRef;
 use crate::types::MetadataType;
 use crate::types::{
@@ -10,6 +11,7 @@ use crate::types::{
 use crate::values::{BasicValue, BasicValueEnum, IntValue};
 
 use std::convert::TryFrom;
+use std::fmt::{self, Display};
 
 macro_rules! enum_type_set {
     ($(#[$enum_attrs:meta])* $enum_name:ident: { $($(#[$variant_attrs:meta])* $args:ident,)+ }) => (
@@ -187,6 +189,19 @@ impl<'ctx> BasicMetadataTypeEnum<'ctx> {
     pub fn is_vector_type(self) -> bool {
         matches!(self, BasicMetadataTypeEnum::VectorType(_))
     }
+
+    /// Print the definition of a `BasicMetadataTypeEnum` to `LLVMString`.
+    pub fn print_to_string(self) -> LLVMString {
+        match self {
+            BasicMetadataTypeEnum::ArrayType(t) => t.print_to_string(),
+            BasicMetadataTypeEnum::IntType(t) => t.print_to_string(),
+            BasicMetadataTypeEnum::FloatType(t) => t.print_to_string(),
+            BasicMetadataTypeEnum::PointerType(t) => t.print_to_string(),
+            BasicMetadataTypeEnum::StructType(t) => t.print_to_string(),
+            BasicMetadataTypeEnum::VectorType(t) => t.print_to_string(),
+            BasicMetadataTypeEnum::MetadataType(t) => t.print_to_string(),
+        }
+    }
 }
 
 impl<'ctx> AnyTypeEnum<'ctx> {
@@ -199,7 +214,12 @@ impl<'ctx> AnyTypeEnum<'ctx> {
             | LLVMTypeKind::LLVMX86_FP80TypeKind
             | LLVMTypeKind::LLVMFP128TypeKind
             | LLVMTypeKind::LLVMPPC_FP128TypeKind => AnyTypeEnum::FloatType(FloatType::new(type_)),
-            #[cfg(any(feature = "llvm11-0", feature = "llvm12-0", feature = "llvm13-0"))]
+            #[cfg(any(
+                feature = "llvm11-0",
+                feature = "llvm12-0",
+                feature = "llvm13-0",
+                feature = "llvm14-0"
+            ))]
             LLVMTypeKind::LLVMBFloatTypeKind => AnyTypeEnum::FloatType(FloatType::new(type_)),
             LLVMTypeKind::LLVMLabelTypeKind => panic!("FIXME: Unsupported type: Label"),
             LLVMTypeKind::LLVMIntegerTypeKind => AnyTypeEnum::IntType(IntType::new(type_)),
@@ -210,7 +230,12 @@ impl<'ctx> AnyTypeEnum<'ctx> {
             LLVMTypeKind::LLVMArrayTypeKind => AnyTypeEnum::ArrayType(ArrayType::new(type_)),
             LLVMTypeKind::LLVMPointerTypeKind => AnyTypeEnum::PointerType(PointerType::new(type_)),
             LLVMTypeKind::LLVMVectorTypeKind => AnyTypeEnum::VectorType(VectorType::new(type_)),
-            #[cfg(any(feature = "llvm11-0", feature = "llvm12-0", feature = "llvm13-0"))]
+            #[cfg(any(
+                feature = "llvm11-0",
+                feature = "llvm12-0",
+                feature = "llvm13-0",
+                feature = "llvm14-0"
+            ))]
             LLVMTypeKind::LLVMScalableVectorTypeKind => {
                 AnyTypeEnum::VectorType(VectorType::new(type_))
             }
@@ -218,7 +243,7 @@ impl<'ctx> AnyTypeEnum<'ctx> {
                 unreachable!("Metadata type is not supported as AnyType.")
             }
             LLVMTypeKind::LLVMX86_MMXTypeKind => panic!("FIXME: Unsupported type: MMX"),
-            #[cfg(any(feature = "llvm12-0", feature = "llvm13-0"))]
+            #[cfg(any(feature = "llvm12-0", feature = "llvm13-0", feature = "llvm14-0"))]
             LLVMTypeKind::LLVMX86_AMXTypeKind => panic!("FIXME: Unsupported type: AMX"),
             #[cfg(not(any(feature = "llvm3-6", feature = "llvm3-7")))]
             LLVMTypeKind::LLVMTokenTypeKind => panic!("FIXME: Unsupported type: Token"),
@@ -338,6 +363,20 @@ impl<'ctx> AnyTypeEnum<'ctx> {
             AnyTypeEnum::FunctionType(_) => None,
         }
     }
+
+    /// Print the definition of a `AnyTypeEnum` to `LLVMString`.
+    pub fn print_to_string(self) -> LLVMString {
+        match self {
+            AnyTypeEnum::ArrayType(t) => t.print_to_string(),
+            AnyTypeEnum::FloatType(t) => t.print_to_string(),
+            AnyTypeEnum::IntType(t) => t.print_to_string(),
+            AnyTypeEnum::PointerType(t) => t.print_to_string(),
+            AnyTypeEnum::StructType(t) => t.print_to_string(),
+            AnyTypeEnum::VectorType(t) => t.print_to_string(),
+            AnyTypeEnum::VoidType(t) => t.print_to_string(),
+            AnyTypeEnum::FunctionType(t) => t.print_to_string(),
+        }
+    }
 }
 
 impl<'ctx> BasicTypeEnum<'ctx> {
@@ -351,7 +390,12 @@ impl<'ctx> BasicTypeEnum<'ctx> {
             | LLVMTypeKind::LLVMPPC_FP128TypeKind => {
                 BasicTypeEnum::FloatType(FloatType::new(type_))
             }
-            #[cfg(any(feature = "llvm11-0", feature = "llvm12-0", feature = "llvm13-0"))]
+            #[cfg(any(
+                feature = "llvm11-0",
+                feature = "llvm12-0",
+                feature = "llvm13-0",
+                feature = "llvm14-0"
+            ))]
             LLVMTypeKind::LLVMBFloatTypeKind => BasicTypeEnum::FloatType(FloatType::new(type_)),
             LLVMTypeKind::LLVMIntegerTypeKind => BasicTypeEnum::IntType(IntType::new(type_)),
             LLVMTypeKind::LLVMStructTypeKind => BasicTypeEnum::StructType(StructType::new(type_)),
@@ -360,7 +404,12 @@ impl<'ctx> BasicTypeEnum<'ctx> {
             }
             LLVMTypeKind::LLVMArrayTypeKind => BasicTypeEnum::ArrayType(ArrayType::new(type_)),
             LLVMTypeKind::LLVMVectorTypeKind => BasicTypeEnum::VectorType(VectorType::new(type_)),
-            #[cfg(any(feature = "llvm11-0", feature = "llvm12-0", feature = "llvm13-0"))]
+            #[cfg(any(
+                feature = "llvm11-0",
+                feature = "llvm12-0",
+                feature = "llvm13-0",
+                feature = "llvm14-0"
+            ))]
             LLVMTypeKind::LLVMScalableVectorTypeKind => {
                 BasicTypeEnum::VectorType(VectorType::new(type_))
             }
@@ -368,7 +417,7 @@ impl<'ctx> BasicTypeEnum<'ctx> {
             // see https://llvm.org/docs/LangRef.html#x86-mmx-type
             LLVMTypeKind::LLVMX86_MMXTypeKind => unreachable!("Unsupported basic type: MMX"),
             // see https://llvm.org/docs/LangRef.html#x86-amx-type
-            #[cfg(any(feature = "llvm12-0", feature = "llvm13-0"))]
+            #[cfg(any(feature = "llvm12-0", feature = "llvm13-0", feature = "llvm14-0"))]
             LLVMTypeKind::LLVMX86_AMXTypeKind => unreachable!("Unsupported basic type: AMX"),
             LLVMTypeKind::LLVMLabelTypeKind => unreachable!("Unsupported basic type: Label"),
             LLVMTypeKind::LLVMVoidTypeKind => unreachable!("Unsupported basic type: VoidType"),
@@ -473,6 +522,18 @@ impl<'ctx> BasicTypeEnum<'ctx> {
             BasicTypeEnum::VectorType(ty) => ty.const_zero().as_basic_value_enum(),
         }
     }
+
+    /// Print the definition of a `BasicTypeEnum` to `LLVMString`.
+    pub fn print_to_string(self) -> LLVMString {
+        match self {
+            BasicTypeEnum::ArrayType(t) => t.print_to_string(),
+            BasicTypeEnum::FloatType(t) => t.print_to_string(),
+            BasicTypeEnum::IntType(t) => t.print_to_string(),
+            BasicTypeEnum::PointerType(t) => t.print_to_string(),
+            BasicTypeEnum::StructType(t) => t.print_to_string(),
+            BasicTypeEnum::VectorType(t) => t.print_to_string(),
+        }
+    }
 }
 
 impl<'ctx> TryFrom<AnyTypeEnum<'ctx>> for BasicTypeEnum<'ctx> {
@@ -501,5 +562,23 @@ impl<'ctx> From<BasicTypeEnum<'ctx>> for BasicMetadataTypeEnum<'ctx> {
             BasicTypeEnum::StructType(st) => st.into(),
             BasicTypeEnum::VectorType(vt) => vt.into(),
         }
+    }
+}
+
+impl Display for AnyTypeEnum<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.print_to_string())
+    }
+}
+
+impl Display for BasicTypeEnum<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.print_to_string())
+    }
+}
+
+impl Display for BasicMetadataTypeEnum<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.print_to_string())
     }
 }

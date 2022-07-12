@@ -13,6 +13,8 @@ use crate::values::{
     StructValue, Value, VectorValue,
 };
 
+use super::{BasicMetadataValueEnum, MetadataValue};
+
 // This is an ugly privacy hack so that Type can stay private to this module
 // and so that super traits using this trait will be not be implementable
 // outside this library
@@ -147,7 +149,7 @@ pub trait AnyValue<'ctx>: AsValueRef + Debug {
 }
 
 trait_value_set! {AggregateValue: ArrayValue, AggregateValueEnum, StructValue}
-trait_value_set! {AnyValue: AnyValueEnum, BasicValueEnum, AggregateValueEnum, ArrayValue, IntValue, FloatValue, GlobalValue, PhiValue, PointerValue, FunctionValue, StructValue, VectorValue, InstructionValue, CallSiteValue}
+trait_value_set! {AnyValue: AnyValueEnum, BasicValueEnum, BasicMetadataValueEnum, AggregateValueEnum, ArrayValue, IntValue, FloatValue, GlobalValue, PhiValue, PointerValue, FunctionValue, StructValue, VectorValue, InstructionValue, CallSiteValue, MetadataValue}
 trait_value_set! {BasicValue: ArrayValue, BasicValueEnum, AggregateValueEnum, IntValue, FloatValue, GlobalValue, StructValue, PointerValue, VectorValue}
 math_trait_value_set! {IntMathValue: (IntValue => IntType), (VectorValue => VectorType)}
 math_trait_value_set! {FloatMathValue: (FloatValue => FloatType), (VectorValue => VectorType)}

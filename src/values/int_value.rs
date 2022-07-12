@@ -12,7 +12,9 @@ use llvm_sys::core::{
 };
 use llvm_sys::prelude::LLVMValueRef;
 
+use std::convert::TryFrom;
 use std::ffi::CStr;
+use std::fmt::{self, Display};
 
 use crate::types::{AsTypeRef, FloatType, IntType, PointerType};
 use crate::values::traits::AsValueRef;
@@ -20,6 +22,8 @@ use crate::values::{
     BasicValue, BasicValueEnum, FloatValue, InstructionValue, PointerValue, Value,
 };
 use crate::IntPredicate;
+
+use super::AnyValue;
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
 pub struct IntValue<'ctx> {
@@ -375,5 +379,23 @@ impl<'ctx> IntValue<'ctx> {
 impl AsValueRef for IntValue<'_> {
     fn as_value_ref(&self) -> LLVMValueRef {
         self.int_value.value
+    }
+}
+
+impl Display for IntValue<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.print_to_string())
+    }
+}
+
+impl<'ctx> TryFrom<InstructionValue<'ctx>> for IntValue<'ctx> {
+    type Error = ();
+
+    fn try_from(value: InstructionValue) -> Result<Self, Self::Error> {
+        if value.get_type().is_int_type() {
+            unsafe { Ok(IntValue::new(value.as_value_ref())) }
+        } else {
+            Err(())
+        }
     }
 }

@@ -10,6 +10,8 @@ use llvm_sys::object::{
     LLVMSymbolIteratorRef,
 };
 
+#[cfg(feature = "internal-getters")]
+use crate::LLVMReference;
 use std::ffi::CStr;
 
 // REVIEW: Make sure SectionIterator's object_file ptr doesn't outlive ObjectFile
@@ -316,5 +318,33 @@ impl Symbol {
 
     pub fn get_address(&self) -> u64 {
         unsafe { LLVMGetSymbolAddress(self.symbol) }
+    }
+}
+
+#[cfg(feature = "internal-getters")]
+impl LLVMReference<LLVMObjectFileRef> for ObjectFile {
+    unsafe fn get_ref(&self) -> LLVMObjectFileRef {
+        self.object_file
+    }
+}
+
+#[cfg(feature = "internal-getters")]
+impl LLVMReference<LLVMSymbolIteratorRef> for Symbol {
+    unsafe fn get_ref(&self) -> LLVMSymbolIteratorRef {
+        self.symbol
+    }
+}
+
+#[cfg(feature = "internal-getters")]
+impl LLVMReference<LLVMSectionIteratorRef> for Section {
+    unsafe fn get_ref(&self) -> LLVMSectionIteratorRef {
+        self.section
+    }
+}
+
+#[cfg(feature = "internal-getters")]
+impl LLVMReference<LLVMRelocationIteratorRef> for Relocation {
+    unsafe fn get_ref(&self) -> LLVMRelocationIteratorRef {
+        self.relocation
     }
 }

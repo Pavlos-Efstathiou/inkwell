@@ -106,6 +106,8 @@ pub use crate::debug_info::flags::{DIFlags, DIFlagsConstants};
 use crate::module::Module;
 use crate::values::{AsValueRef, BasicValueEnum, InstructionValue, MetadataValue, PointerValue};
 
+#[cfg(feature = "internal-getters")]
+use crate::LLVMReference;
 use llvm_sys::core::LLVMMetadataAsValue;
 #[llvm_versions(8.0..=latest)]
 use llvm_sys::debuginfo::LLVMDIBuilderCreateTypedef;
@@ -179,8 +181,20 @@ impl<'ctx> DebugInfoBuilder<'ctx> {
         dwo_id: libc::c_uint,
         split_debug_inlining: bool,
         debug_info_for_profiling: bool,
-        #[cfg(any(feature = "llvm11-0", feature = "llvm12-0", feature = "llvm13-0"))] sysroot: &str,
-        #[cfg(any(feature = "llvm11-0", feature = "llvm12-0", feature = "llvm13-0"))] sdk: &str,
+        #[cfg(any(
+            feature = "llvm11-0",
+            feature = "llvm12-0",
+            feature = "llvm13-0",
+            feature = "llvm14-0"
+        ))]
+        sysroot: &str,
+        #[cfg(any(
+            feature = "llvm11-0",
+            feature = "llvm12-0",
+            feature = "llvm13-0",
+            feature = "llvm14-0"
+        ))]
+        sdk: &str,
     ) -> (Self, DICompileUnit<'ctx>) {
         let builder = unsafe {
             if allow_unresolved {
@@ -209,9 +223,19 @@ impl<'ctx> DebugInfoBuilder<'ctx> {
             dwo_id,
             split_debug_inlining,
             debug_info_for_profiling,
-            #[cfg(any(feature = "llvm11-0", feature = "llvm12-0", feature = "llvm13-0"))]
+            #[cfg(any(
+                feature = "llvm11-0",
+                feature = "llvm12-0",
+                feature = "llvm13-0",
+                feature = "llvm14-0"
+            ))]
             sysroot,
-            #[cfg(any(feature = "llvm11-0", feature = "llvm12-0", feature = "llvm13-0"))]
+            #[cfg(any(
+                feature = "llvm11-0",
+                feature = "llvm12-0",
+                feature = "llvm13-0",
+                feature = "llvm14-0"
+            ))]
             sdk,
         );
 
@@ -244,8 +268,20 @@ impl<'ctx> DebugInfoBuilder<'ctx> {
         dwo_id: libc::c_uint,
         split_debug_inlining: bool,
         debug_info_for_profiling: bool,
-        #[cfg(any(feature = "llvm11-0", feature = "llvm12-0", feature = "llvm13-0"))] sysroot: &str,
-        #[cfg(any(feature = "llvm11-0", feature = "llvm12-0", feature = "llvm13-0"))] sdk: &str,
+        #[cfg(any(
+            feature = "llvm11-0",
+            feature = "llvm12-0",
+            feature = "llvm13-0",
+            feature = "llvm14-0"
+        ))]
+        sysroot: &str,
+        #[cfg(any(
+            feature = "llvm11-0",
+            feature = "llvm12-0",
+            feature = "llvm13-0",
+            feature = "llvm14-0"
+        ))]
+        sdk: &str,
     ) -> DICompileUnit<'ctx> {
         let metadata_ref = unsafe {
             #[cfg(any(
@@ -281,7 +317,12 @@ impl<'ctx> DebugInfoBuilder<'ctx> {
                 )
             }
 
-            #[cfg(any(feature = "llvm11-0", feature = "llvm12-0", feature = "llvm13-0"))]
+            #[cfg(any(
+                feature = "llvm11-0",
+                feature = "llvm12-0",
+                feature = "llvm13-0",
+                feature = "llvm14-0"
+            ))]
             {
                 LLVMDIBuilderCreateCompileUnit(
                     self.builder,
@@ -689,7 +730,7 @@ impl<'ctx> DebugInfoBuilder<'ctx> {
     #[llvm_versions(8.0..=latest)]
     pub fn create_constant_expression(&self, value: i64) -> DIExpression<'ctx> {
         let metadata_ref =
-            unsafe { LLVMDIBuilderCreateConstantValueExpression(self.builder, value) };
+            unsafe { LLVMDIBuilderCreateConstantValueExpression(self.builder, value as _) };
 
         DIExpression {
             metadata_ref,
@@ -839,7 +880,7 @@ impl<'ctx> DebugInfoBuilder<'ctx> {
         let metadata_ref = unsafe {
             LLVMDIBuilderCreateExpression(
                 self.builder,
-                address_operations.as_mut_ptr(),
+                address_operations.as_mut_ptr() as *mut _,
                 address_operations.len(),
             )
         };
@@ -1364,5 +1405,19 @@ mod flags {
         GOOGLERenderScript,
         #[llvm_variant(LLVMDWARFSourceLanguageBORLAND_Delphi)]
         BORLANDDelphi,
+    }
+}
+
+#[cfg(feature = "internal-getters")]
+impl LLVMReference<LLVMMetadataRef> for DIType<'_> {
+    unsafe fn get_ref(&self) -> LLVMMetadataRef {
+        self.metadata_ref
+    }
+}
+
+#[cfg(feature = "internal-getters")]
+impl LLVMReference<LLVMDIBuilderRef> for DebugInfoBuilder<'_> {
+    unsafe fn get_ref(&self) -> LLVMDIBuilderRef {
+        self.builder
     }
 }

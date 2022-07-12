@@ -16,11 +16,15 @@ use llvm_sys::core::{
 use llvm_sys::core::{LLVMAddModuleFlag, LLVMGetModuleFlag};
 #[llvm_versions(3.9..=latest)]
 use llvm_sys::core::{LLVMGetModuleIdentifier, LLVMSetModuleIdentifier};
+#[llvm_versions(13.0..=latest)]
+use llvm_sys::error::LLVMGetErrorMessage;
 use llvm_sys::execution_engine::{
     LLVMCreateExecutionEngineForModule, LLVMCreateInterpreterForModule,
     LLVMCreateJITCompilerForModule,
 };
 use llvm_sys::prelude::{LLVMModuleRef, LLVMValueRef};
+#[llvm_versions(13.0..=latest)]
+use llvm_sys::transforms::pass_builder::LLVMRunPasses;
 use llvm_sys::LLVMLinkage;
 #[llvm_versions(7.0..=latest)]
 use llvm_sys::LLVMModuleFlagBehavior;
@@ -42,12 +46,18 @@ use crate::data_layout::DataLayout;
 use crate::debug_info::{DICompileUnit, DWARFEmissionKind, DWARFSourceLanguage, DebugInfoBuilder};
 use crate::execution_engine::ExecutionEngine;
 use crate::memory_buffer::MemoryBuffer;
+#[llvm_versions(13.0..=latest)]
+use crate::passes::PassBuilderOptions;
 use crate::support::{to_c_str, LLVMString};
+#[llvm_versions(13.0..=latest)]
+use crate::targets::TargetMachine;
 use crate::targets::{InitializationConfig, Target, TargetTriple};
 use crate::types::{AsTypeRef, BasicType, FunctionType, StructType};
 #[llvm_versions(7.0..=latest)]
 use crate::values::BasicValue;
 use crate::values::{AsValueRef, FunctionValue, GlobalValue, MetadataValue};
+#[cfg(feature = "internal-getters")]
+use crate::LLVMReference;
 use crate::{AddressSpace, OptimizationLevel};
 
 #[llvm_enum(LLVMLinkage)]
@@ -303,6 +313,32 @@ impl<'ctx> Module<'ctx> {
         let c_string = to_c_str(name);
 
         unsafe { FunctionValue::new(LLVMGetNamedFunction(self.module.get(), c_string.as_ptr())) }
+    }
+
+    /// An iterator over the functions in this `Module`.
+    ///
+    /// ```
+    /// use inkwell::context::Context;
+    /// use inkwell::module::Module;
+    ///
+    /// let context = Context::create();
+    /// let module = context.create_module("my_mod");
+    ///
+    /// assert!(module.get_function("my_fn").is_none());
+    ///
+    /// let void_type = context.void_type();
+    /// let fn_type = void_type.fn_type(&[], false);
+    /// let fn_value = module.add_function("my_fn", fn_type, None);
+    ///
+    /// let names: Vec<String> = module
+    ///     .get_functions()
+    ///     .map(|f| f.get_name().to_string_lossy().to_string())
+    ///     .collect();
+    ///
+    /// assert_eq!(vec!["my_fn".to_owned()], names);
+    /// ```
+    pub fn get_functions(&self) -> FunctionIterator<'ctx> {
+        FunctionIterator::from_module(self)
     }
 
     /// Gets a named `StructType` from this `Module`'s `Context`.
@@ -773,7 +809,7 @@ impl<'ctx> Module<'ctx> {
         }
     }
 
-    /// Prints the content of the `Module` to a string.
+    /// Prints the content of the `Module` to an `LLVMString`.
     pub fn print_to_string(&self) -> LLVMString {
         unsafe { LLVMString::new(LLVMPrintModuleToString(self.module.get())) }
     }
@@ -801,6 +837,11 @@ impl<'ctx> Module<'ctx> {
         }
 
         Ok(())
+    }
+
+    /// Prints the content of the `Module` to a `String`.
+    pub fn to_string(&self) -> String {
+        self.print_to_string().to_string()
     }
 
     /// Sets the inline assembly for the `Module`.
@@ -1444,8 +1485,20 @@ impl<'ctx> Module<'ctx> {
         dwo_id: libc::c_uint,
         split_debug_inlining: bool,
         debug_info_for_profiling: bool,
-        #[cfg(any(feature = "llvm11-0", feature = "llvm12-0", feature = "llvm13-0"))] sysroot: &str,
-        #[cfg(any(feature = "llvm11-0", feature = "llvm12-0", feature = "llvm13-0"))] sdk: &str,
+        #[cfg(any(
+            feature = "llvm11-0",
+            feature = "llvm12-0",
+            feature = "llvm13-0",
+            feature = "llvm14-0"
+        ))]
+        sysroot: &str,
+        #[cfg(any(
+            feature = "llvm11-0",
+            feature = "llvm12-0",
+            feature = "llvm13-0",
+            feature = "llvm14-0"
+        ))]
+        sdk: &str,
     ) -> (DebugInfoBuilder<'ctx>, DICompileUnit<'ctx>) {
         DebugInfoBuilder::new(
             self,
@@ -1462,11 +1515,50 @@ impl<'ctx> Module<'ctx> {
             dwo_id,
             split_debug_inlining,
             debug_info_for_profiling,
-            #[cfg(any(feature = "llvm11-0", feature = "llvm12-0", feature = "llvm13-0"))]
+            #[cfg(any(
+                feature = "llvm11-0",
+                feature = "llvm12-0",
+                feature = "llvm13-0",
+                feature = "llvm14-0"
+            ))]
             sysroot,
-            #[cfg(any(feature = "llvm11-0", feature = "llvm12-0", feature = "llvm13-0"))]
+            #[cfg(any(
+                feature = "llvm11-0",
+                feature = "llvm12-0",
+                feature = "llvm13-0",
+                feature = "llvm14-0"
+            ))]
             sdk,
         )
+    }
+
+    /// Construct and run a set of passes over a module.
+    /// This function takes a string with the passes that should be used.
+    /// The format of this string is the same as opt's -passes argument for the new pass manager.
+    /// Individual passes may be specified, separated by commas.
+    /// Full pipelines may also be invoked using default<O3> and friends.
+    /// See opt for full reference of the Passes format.
+    #[llvm_versions(13.0..=latest)]
+    pub fn run_passes(
+        &self,
+        passes: &str,
+        machine: &TargetMachine,
+        options: PassBuilderOptions,
+    ) -> Result<(), LLVMString> {
+        unsafe {
+            let error = LLVMRunPasses(
+                self.module.get(),
+                to_c_str(passes).as_ptr(),
+                machine.target_machine,
+                options.options_ref,
+            );
+            if error == std::ptr::null_mut() {
+                Ok(())
+            } else {
+                let message = LLVMGetErrorMessage(error);
+                Err(LLVMString::new(message as *const libc::c_char))
+            }
+        }
     }
 }
 
@@ -1475,7 +1567,11 @@ impl Clone for Module<'_> {
         // REVIEW: Is this just a LLVM 6 bug? We could conditionally compile this assertion for affected versions
         let verify = self.verify();
 
-        assert!(verify.is_ok(), "Cloning a Module seems to segfault when module is not valid. We are preventing that here. Error: {}", verify.unwrap_err());
+        assert!(
+            verify.is_ok(),
+            "Cloning a Module seems to segfault when module is not valid. We are preventing that here. Error: {}",
+            verify.unwrap_err()
+        );
 
         unsafe { Module::new(LLVMCloneModule(self.module.get())) }
     }
@@ -1492,6 +1588,13 @@ impl Drop for Module<'_> {
         }
 
         // Context & EE will drop naturally if they are unique references at this point
+    }
+}
+
+#[cfg(feature = "internal-getters")]
+impl LLVMReference<LLVMModuleRef> for Module<'_> {
+    unsafe fn get_ref(&self) -> LLVMModuleRef {
+        self.module.get()
     }
 }
 
@@ -1527,4 +1630,52 @@ pub enum FlagBehavior {
     /// entries in the second list are dropped during the append operation.
     #[llvm_variant(LLVMModuleFlagBehaviorAppendUnique)]
     AppendUnique,
+}
+
+/// Iterate over all `FunctionValue`s in an llvm module
+#[derive(Debug)]
+pub struct FunctionIterator<'ctx>(FunctionIteratorInner<'ctx>);
+
+/// Inner type so the variants are not publicly visible
+#[derive(Debug)]
+enum FunctionIteratorInner<'ctx> {
+    Empty,
+    Start(FunctionValue<'ctx>),
+    Previous(FunctionValue<'ctx>),
+}
+
+impl<'ctx> FunctionIterator<'ctx> {
+    fn from_module(module: &Module<'ctx>) -> Self {
+        use FunctionIteratorInner::*;
+
+        match module.get_first_function() {
+            None => Self(Empty),
+            Some(first) => Self(Start(first)),
+        }
+    }
+}
+
+impl<'ctx> Iterator for FunctionIterator<'ctx> {
+    type Item = FunctionValue<'ctx>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        use FunctionIteratorInner::*;
+
+        match self.0 {
+            Empty => None,
+            Start(first) => {
+                self.0 = Previous(first);
+
+                Some(first)
+            }
+            Previous(prev) => match prev.get_next_function() {
+                Some(current) => {
+                    self.0 = Previous(current);
+
+                    Some(current)
+                }
+                None => None,
+            },
+        }
+    }
 }

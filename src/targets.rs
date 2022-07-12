@@ -29,6 +29,8 @@ use crate::passes::PassManager;
 use crate::support::{to_c_str, LLVMString};
 use crate::types::{AnyType, AsTypeRef, IntType, StructType};
 use crate::values::{AsValueRef, GlobalValue};
+#[cfg(feature = "internal-getters")]
+use crate::LLVMReference;
 use crate::{AddressSpace, OptimizationLevel};
 
 use std::default::Default;
@@ -750,7 +752,9 @@ impl Target {
     #[llvm_versions(9.0..=latest)]
     pub fn initialize_riscv(config: &InitializationConfig) {
         use llvm_sys::target::{
-            LLVMInitializeRISCVTarget, LLVMInitializeRISCVTargetInfo, LLVMInitializeRISCVTargetMC,
+            LLVMInitializeRISCVAsmParser, LLVMInitializeRISCVAsmPrinter,
+            LLVMInitializeRISCVDisassembler, LLVMInitializeRISCVTarget,
+            LLVMInitializeRISCVTargetInfo, LLVMInitializeRISCVTargetMC,
         };
 
         if config.base {
@@ -763,11 +767,20 @@ impl Target {
             unsafe { LLVMInitializeRISCVTargetInfo() };
         }
 
-        // No asm printer
+        if config.asm_printer {
+            let _guard = TARGET_LOCK.write();
+            unsafe { LLVMInitializeRISCVAsmPrinter() };
+        }
 
-        // No asm parser
+        if config.asm_parser {
+            let _guard = TARGET_LOCK.write();
+            unsafe { LLVMInitializeRISCVAsmParser() };
+        }
 
-        // No disassembler
+        if config.disassembler {
+            let _guard = TARGET_LOCK.write();
+            unsafe { LLVMInitializeRISCVDisassembler() };
+        }
 
         if config.machine_code {
             let _guard = TARGET_LOCK.write();
@@ -1406,5 +1419,12 @@ impl TargetData {
 impl Drop for TargetData {
     fn drop(&mut self) {
         unsafe { LLVMDisposeTargetData(self.target_data) }
+    }
+}
+
+#[cfg(feature = "internal-getters")]
+impl LLVMReference<LLVMTargetMachineRef> for TargetMachine {
+    unsafe fn get_ref(&self) -> LLVMTargetMachineRef {
+        self.target_machine
     }
 }

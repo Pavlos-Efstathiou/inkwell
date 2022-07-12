@@ -38,16 +38,20 @@ use crate::memory_buffer::MemoryBuffer;
 use crate::module::Module;
 use crate::support::{to_c_str, LLVMString};
 use crate::targets::TargetData;
+#[llvm_versions(12.0..=latest)]
+use crate::types::AnyTypeEnum;
 #[llvm_versions(6.0..=latest)]
 use crate::types::MetadataType;
 use crate::types::{
-    AnyTypeEnum, AsTypeRef, BasicTypeEnum, FloatType, FunctionType, IntType, StructType, VoidType,
+    AsTypeRef, BasicTypeEnum, FloatType, FunctionType, IntType, StructType, VoidType,
 };
 use crate::values::{
     AsValueRef, BasicMetadataValueEnum, BasicValueEnum, FunctionValue, MetadataValue, PointerValue,
     StructValue, VectorValue,
 };
 use crate::AddressSpace;
+#[cfg(feature = "internal-getters")]
+use crate::LLVMReference;
 
 use std::marker::PhantomData;
 use std::mem::{forget, ManuallyDrop};
@@ -246,7 +250,6 @@ impl Context {
         dialect: Option<InlineAsmDialect>,
         can_throw: bool,
     ) -> PointerValue {
-        #[cfg(any(feature = "llvm13-0"))]
         let can_throw_llvmbool = can_throw as i32;
 
         let value = unsafe {
@@ -1092,18 +1095,18 @@ impl<'ctx> ContextRef<'ctx> {
         }
     }
 
-    /// Gets a usable context object with a correct lifetime.
+    // /// Gets a usable context object with a correct lifetime.
     // FIXME: Not safe :(
-    #[cfg(feature = "experimental")]
-    pub unsafe fn get(&self) -> &'ctx Context {
-        // Safety: Although strictly untrue that a local reference to the context field
-        // is guaranteed to live for the entirety of 'ctx:
-        // 1) ContextRef cannot outlive 'ctx
-        // 2) Any method called called with this context object will inherit 'ctx,
-        // which is its proper lifetime and does not point into this context object
-        // specifically but towards the actual context pointer in LLVM.
-        &*(&*self.context as *const Context)
-    }
+    // #[cfg(feature = "experimental")]
+    // pub unsafe fn get(&self) -> &'ctx Context {
+    //     // Safety: Although strictly untrue that a local reference to the context field
+    //     // is guaranteed to live for the entirety of 'ctx:
+    //     // 1) ContextRef cannot outlive 'ctx
+    //     // 2) Any method called called with this context object will inherit 'ctx,
+    //     // which is its proper lifetime and does not point into this context object
+    //     // specifically but towards the actual context pointer in LLVM.
+    //     &*(&*self.context as *const Context)
+    // }
 }
 
 impl Deref for ContextRef<'_> {
@@ -1111,5 +1114,12 @@ impl Deref for ContextRef<'_> {
 
     fn deref(&self) -> &Self::Target {
         &*self.context
+    }
+}
+
+#[cfg(feature = "internal-getters")]
+impl LLVMReference<LLVMContextRef> for Context {
+    unsafe fn get_ref(&self) -> LLVMContextRef {
+        self.context
     }
 }

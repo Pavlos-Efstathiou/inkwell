@@ -9,14 +9,18 @@ use llvm_sys::core::LLVMValueAsMetadata;
 #[llvm_versions(7.0..=latest)]
 use llvm_sys::prelude::LLVMMetadataRef;
 
-use crate::support::LLVMString;
 use crate::values::traits::AsValueRef;
 use crate::values::{BasicMetadataValueEnum, Value};
 
-use std::ffi::CStr;
-use std::fmt;
+use super::AnyValue;
 
-// TODOC: Varies by version
+use std::ffi::CStr;
+use std::fmt::{self, Display};
+
+// FIXME: use #[doc(cfg(...))] for this rustdoc comment when it's stabilized:
+// https://github.com/rust-lang/rust/issues/43781
+/// Value returned by [`Context::get_kind_id()`](crate::context::Context::get_kind_id)
+/// for the first input string that isn't known. Each LLVM version has a different set of pre-defined metadata kinds.
 #[cfg(feature = "llvm3-6")]
 pub const FIRST_CUSTOM_METADATA_KIND_ID: u32 = 12;
 #[cfg(feature = "llvm3-7")]
@@ -42,6 +46,8 @@ pub const FIRST_CUSTOM_METADATA_KIND_ID: u32 = 30;
 #[cfg(feature = "llvm12-0")]
 pub const FIRST_CUSTOM_METADATA_KIND_ID: u32 = 31;
 #[cfg(feature = "llvm13-0")]
+pub const FIRST_CUSTOM_METADATA_KIND_ID: u32 = 31;
+#[cfg(feature = "llvm14-0")]
 pub const FIRST_CUSTOM_METADATA_KIND_ID: u32 = 31;
 
 #[derive(PartialEq, Eq, Clone, Copy, Hash)]
@@ -116,10 +122,6 @@ impl<'ctx> MetadataValue<'ctx> {
             .collect()
     }
 
-    pub fn print_to_string(self) -> LLVMString {
-        self.metadata_value.print_to_string()
-    }
-
     pub fn print_to_stderr(self) {
         self.metadata_value.print_to_stderr()
     }
@@ -133,6 +135,12 @@ impl<'ctx> MetadataValue<'ctx> {
 impl AsValueRef for MetadataValue<'_> {
     fn as_value_ref(&self) -> LLVMValueRef {
         self.metadata_value.value
+    }
+}
+
+impl Display for MetadataValue<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.print_to_string())
     }
 }
 

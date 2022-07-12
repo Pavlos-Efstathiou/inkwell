@@ -13,7 +13,7 @@ use llvm_sys::core::{
     LLVMGetIntrinsicID, LLVMGetLastBasicBlock, LLVMGetLastParam, LLVMGetLinkage,
     LLVMGetNextFunction, LLVMGetNextParam, LLVMGetParam, LLVMGetParams, LLVMGetPreviousFunction,
     LLVMIsAFunction, LLVMIsConstant, LLVMSetFunctionCallConv, LLVMSetGC, LLVMSetLinkage,
-    LLVMSetParamAlignment,
+    LLVMSetParamAlignment, LLVMSetSection,
 };
 #[llvm_versions(3.7..=latest)]
 use llvm_sys::core::{LLVMGetPersonalityFn, LLVMSetPersonalityFn};
@@ -22,7 +22,7 @@ use llvm_sys::debuginfo::{LLVMGetSubprogram, LLVMSetSubprogram};
 use llvm_sys::prelude::{LLVMBasicBlockRef, LLVMValueRef};
 
 use std::ffi::CStr;
-use std::fmt;
+use std::fmt::{self, Display};
 use std::marker::PhantomData;
 use std::mem::forget;
 
@@ -33,7 +33,7 @@ use crate::basic_block::BasicBlock;
 use crate::debug_info::DISubprogram;
 use crate::module::Linkage;
 use crate::support::to_c_str;
-use crate::types::{AnyType, FunctionType, PointerType};
+use crate::types::{FunctionType, PointerType};
 use crate::values::traits::{AnyValue, AsValueRef};
 use crate::values::{BasicValueEnum, GlobalValue, Value};
 
@@ -332,6 +332,59 @@ impl<'ctx> FunctionValue<'ctx> {
         unsafe { LLVMGetAttributeCountAtIndex(self.as_value_ref(), loc.get_index()) }
     }
 
+    /// Get all `Attribute`s belonging to the specified location in this `FunctionValue`.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use inkwell::attributes::AttributeLoc;
+    /// use inkwell::context::Context;
+    ///
+    /// let context = Context::create();
+    /// let module = context.create_module("my_mod");
+    /// let void_type = context.void_type();
+    /// let fn_type = void_type.fn_type(&[], false);
+    /// let fn_value = module.add_function("my_fn", fn_type, None);
+    /// let string_attribute = context.create_string_attribute("my_key", "my_val");
+    /// let enum_attribute = context.create_enum_attribute(1, 1);
+    ///
+    /// fn_value.add_attribute(AttributeLoc::Return, string_attribute);
+    /// fn_value.add_attribute(AttributeLoc::Return, enum_attribute);
+    ///
+    /// assert_eq!(fn_value.attributes(AttributeLoc::Return), vec![ string_attribute, enum_attribute ]);
+    /// ```
+    #[llvm_versions(3.9..=latest)]
+    pub fn attributes(self, loc: AttributeLoc) -> Vec<Attribute> {
+        use llvm_sys::core::LLVMGetAttributesAtIndex;
+        use std::mem::{ManuallyDrop, MaybeUninit};
+
+        let count = self.count_attributes(loc) as usize;
+
+        // initialize a vector, but leave each element uninitialized
+        let mut attribute_refs: Vec<MaybeUninit<Attribute>> = vec![MaybeUninit::uninit(); count];
+
+        // Safety: relies on `Attribute` having the same in-memory representation as `LLVMAttributeRef`
+        unsafe {
+            LLVMGetAttributesAtIndex(
+                self.as_value_ref(),
+                loc.get_index(),
+                attribute_refs.as_mut_ptr() as *mut _,
+            )
+        }
+
+        // Safety: all elements are initialized
+        unsafe {
+            // ensure the vector is not dropped
+            let mut attribute_refs = ManuallyDrop::new(attribute_refs);
+
+            Vec::from_raw_parts(
+                attribute_refs.as_mut_ptr() as *mut Attribute,
+                attribute_refs.len(),
+                attribute_refs.capacity(),
+            )
+        }
+    }
+
     /// Removes a string `Attribute` belonging to the specified location in this `FunctionValue`.
     ///
     /// # Example
@@ -488,11 +541,24 @@ impl<'ctx> FunctionValue<'ctx> {
             })
         }
     }
+
+    /// Set the section to which this function should belong
+    pub fn set_section(self, section: &str) {
+        let c_string = to_c_str(section);
+
+        unsafe { LLVMSetSection(self.as_value_ref(), c_string.as_ptr()) }
+    }
 }
 
 impl AsValueRef for FunctionValue<'_> {
     fn as_value_ref(&self) -> LLVMValueRef {
         self.fn_value.value
+    }
+}
+
+impl Display for FunctionValue<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.print_to_string())
     }
 }
 

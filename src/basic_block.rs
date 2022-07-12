@@ -13,6 +13,8 @@ use llvm_sys::prelude::{LLVMBasicBlockRef, LLVMValueRef};
 
 use crate::context::ContextRef;
 use crate::values::{AsValueRef, BasicValueUse, FunctionValue, InstructionValue, PointerValue};
+#[cfg(feature = "internal-getters")]
+use crate::LLVMReference;
 
 use std::ffi::CStr;
 use std::fmt;
@@ -548,5 +550,12 @@ impl fmt::Debug for BasicBlock<'_> {
             .field("llvm_value", &llvm_value)
             .field("llvm_type", &llvm_type)
             .finish()
+    }
+}
+
+#[cfg(feature = "internal-getters")]
+impl LLVMReference<LLVMBasicBlockRef> for BasicBlock<'_> {
+    unsafe fn get_ref(&self) -> LLVMBasicBlockRef {
+        self.basic_block
     }
 }
