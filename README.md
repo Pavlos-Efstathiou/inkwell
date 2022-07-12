@@ -1,6 +1,6 @@
 # Inkwell(s)
 
-[![Crates.io](https://img.shields.io/crates/v/inkwell_llvm_12.svg?style=plastic)](https://crates.io/crates/inkwell)
+[![Crates.io](https://img.shields.io/crates/v/inkwell_llvm12.svg?style=plastic)](https://crates.io/crates/inkwell)
 [![lines of code](https://tokei.rs/b1/github/lunandd/inkwell)](https://github.com/Aaronepower/tokei)
 ![Minimum rustc 1.42](https://img.shields.io/badge/rustc-1.42+-brightgreen.svg)
 
@@ -19,9 +19,8 @@ Inkwell aims to help you pen your own programming languages by safely wrapping l
 You'll need to point your Cargo.toml to an existing preview crate on crates.io or the master
 branch with a corresponding LLVM feature flag:
 
-```toml
-[dependencies]
-inkwell_llvm_12 = "0.1.0"
+```
+cargo add inkwell_llvm12
 ```
 Please be aware that we may make breaking changes on master from time to time since we are
 pre-v1.0.0, in compliance with semver. Please prefer a crates.io release whenever possible!
@@ -35,7 +34,7 @@ Documentation is automatically [deployed here](https://thedan64.github.io/inkwel
 ### Tari's [llvm-sys example](https://gitlab.com/taricorp/llvm-sys.rs/blob/6411edb2fed1a805b7ec5029afc9c3ae1cf6c842/examples/jit-function.rs) written in safe code<sup>1</sup> with Inkwell:
 
 ```rust
-extern inkwell_llvm_12 as inkwell;
+extern inkwell_llvm12 as inkwell;
 
 use inkwell::OptimizationLevel;
 use inkwell::builder::Builder;
